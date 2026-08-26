@@ -7,9 +7,10 @@
   <meta name="theme-color" content="#f5f0e6">
   <title>字造集 - 基于汉字构形美学与六书逻辑的汉字文化互动共创H5</title>
   <meta name="description" content="如果今天让你造一个汉字，你会怎么造？《字造集》让你从汉字学习者变为共创者。">
+  <link rel="preload" href="css/style.css?v=20260825-v35-4" as="style">
   <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="css/animate.css">
-  <link rel="stylesheet" href="css/style.css?v=20260825-v35-2">
+  <link rel="stylesheet" href="css/style.css?v=20260825-v35-4">
 </head>
 <body>
 
@@ -117,23 +118,23 @@
         <div>拖动时间轴，看太阳如何变成"日"。</div>
       </div>
       <div class="evolution-box">
-        <img id="sunImage" src="assets/images/sun-real.svg" class="sun-image">
+        <img id="sunImage" src="assets/images/sun-real.svg" class="sun-image" loading="lazy">
         <input id="timeline" type="range" min="0" max="3" step="1" value="0">
         <div class="timeline-label">
           <span class="active">
-            <img src="assets/images/sun-real.svg" class="stage-thumb">
+            <img src="assets/images/sun-real.svg" class="stage-thumb" loading="lazy">
             太阳<br><small>远古</small>
           </span>
           <span>
-            <img src="assets/images/sun-oracle.svg" class="stage-thumb">
+            <img src="assets/images/sun-oracle.svg" class="stage-thumb" loading="lazy">
             甲骨文<br><small>商代</small>
           </span>
           <span>
-            <img src="assets/images/sun-seal.svg" class="stage-thumb">
+            <img src="assets/images/sun-seal.svg" class="stage-thumb" loading="lazy">
             小篆<br><small>秦代</small>
           </span>
           <span>
-            <img src="assets/images/sun-day.svg" class="stage-thumb">
+            <img src="assets/images/sun-day.svg" class="stage-thumb" loading="lazy">
             日<br><small>今日</small>
           </span>
         </div>
@@ -268,7 +269,7 @@
   <div class="page" id="page-charcard" style="display:none;">
     <div class="charcard-container">
       <div class="charcard ancient-card">
-        <img class="forge-seal" src="assets/images/seal-zizaoji.png" alt="字造集印章">
+        <img class="forge-seal" src="assets/images/seal-zizaoji.png" alt="字造集印章" loading="lazy">
         <div class="charcard-header">
           <div class="charcard-brand">字造集</div>
           <div class="charcard-subtitle">我的造字</div>
@@ -295,7 +296,7 @@
       <div class="personality-desc" id="personality-desc">擅长把两个已有意义组合起来</div>
     </div>
     <div class="certify-card ancient-card">
-      <img class="forge-seal" src="assets/images/seal-zizaoji.png" alt="字造集印章">
+      <img class="forge-seal" src="assets/images/seal-zizaoji.png" alt="字造集印章" loading="lazy">
       <div class="certify-title">《字造集》造字资格证</div>
       <div class="certify-row"><span class="label">认证人</span><span class="value" id="certify-name">字造师</span></div>
       <div class="certify-row"><span class="label">类型</span><span class="value" id="certify-type">会意魔法师</span></div>
@@ -377,9 +378,7 @@
 
 </div>
 
-<script src="js/html2canvas.min.js"></script>
-<script src="js/poster.embedded-images.js?v=20260822-1930"></script>
-<script src="js/poster.generator.js?v=20260825-v35-2"></script>
-<script src="js/main.js?v=20260825-v35-2"></script>
+<script src="js/html2canvas.min.js" defer></script>
+<script src="js/main.js?v=20260825-v35-4" defer></script>
 </body>
 </html>

@@ -4,21 +4,21 @@
   src: url("zizaoji-serif.woff2") format("woff2");
   font-style: normal;
   font-weight: 100 900;
-  font-display: block;
+  font-display: swap;
 }
 @font-face {
   font-family: "Zizaoji-Sans";
   src: url("zizaoji-sans.woff2") format("woff2");
   font-style: normal;
   font-weight: 100 900;
-  font-display: block;
+  font-display: swap;
 }
 @font-face {
   font-family: "ZhiMangXing";
   src: url("ZhiMangXing-Regular.ttf") format("truetype");
   font-style: normal;
   font-weight: 100 900;
-  font-display: block;
+  font-display: swap;
 }
 
 :root {

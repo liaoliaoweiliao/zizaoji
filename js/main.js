@@ -67,10 +67,10 @@
       earth: 'element/earth.mp3'
     };
     const bgmVolumes = {
-      // 整体背景音乐音量调高
-      home: -8, scene: -10, intro: -10, lab: -13, ability: -9, workshop: -7,
-      analysis: -15, meaning: -12, charcard: -12, certify: -12,
-      poster: -12, collection: -15
+      // 整体背景音乐音量大幅提高
+      home: -5, scene: -7, intro: -7, lab: -10, ability: -6, workshop: -4,
+      analysis: -12, meaning: -6, charcard: -6, certify: -6,
+      poster: -6, collection: -12
     };
     const bgmByPage = {
       scene: 'bgmHome', intro: 'bgmHome', lab: 'bgmCollection',
@@ -87,7 +87,7 @@
     const pending = [];
     const now = () => Date.now();
     // 全局音效增益：所有交互音效统一提高
-    const sfxBoost = 4;
+    const sfxBoost = 7;
 
     function dbToVolume(db) { return Math.max(0, Math.min(1, Math.pow(10, db / 20))); }
     function getAudio(key) {
@@ -143,7 +143,10 @@
       if (!key) return;
       const db = bgmVolumes[pageId] ?? -20;
       if (!unlocked) { currentBgmKey = key; currentBgm = getAudio(key); currentBgm._zDb = db; try { currentBgm.currentTime = 0; } catch(e) {} return; }
-      startBgm(key, db, false, pageId === 'ability' ? 5000 : 500);
+      // 释义/字卡/造字人格/海报四页共享 meaning-story，短淡入确保快速听到
+      const sharedPages = ['meaning','charcard','certify','poster'];
+      const fadeMs = pageId === 'ability' ? 5000 : (sharedPages.includes(pageId) ? 200 : 500);
+      startBgm(key, db, false, fadeMs);
     }
     function playSfx(key, db, maxMs, rate=1, queueIfLocked=true) {
       // 声音开关关闭时，所有交互音效也不播放
@@ -216,6 +219,29 @@
     toast.textContent = msg;
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), duration);
+  }
+
+  // ===== 海报脚本按需加载（6.8MB embedded-images 不阻塞首屏）=====
+  let posterScriptsLoaded = false;
+  let posterScriptsPromise = null;
+  function loadPosterScripts() {
+    if (posterScriptsLoaded) return Promise.resolve();
+    if (posterScriptsPromise) return posterScriptsPromise;
+    posterScriptsPromise = new Promise((resolve, reject) => {
+      const v = '20260825-v35-4';
+      const s1 = document.createElement('script');
+      s1.src = 'js/poster.embedded-images.js?v=' + v;
+      s1.onload = () => {
+        const s2 = document.createElement('script');
+        s2.src = 'js/poster.generator.js?v=' + v;
+        s2.onload = () => { posterScriptsLoaded = true; resolve(); };
+        s2.onerror = reject;
+        document.body.appendChild(s2);
+      };
+      s1.onerror = reject;
+      document.body.appendChild(s1);
+    });
+    return posterScriptsPromise;
   }
 
   // 能力值转换为100分制
@@ -1034,15 +1060,19 @@ if (index >= 3) {
     const canvas = $('#char-canvas');
     const comps = AppState.currentChar.components;
 
-    if (comps.length === 0) {
-      canvas.innerHTML = '<div class="canvas-empty-hint">从下方选择构件<br>开始造字</div>';
+    if (comps.length < 2) {
+      if (comps.length === 0) {
+        canvas.innerHTML = '<div class="canvas-empty-hint">从下方选择构件<br>开始造字</div>';
+      }
       syncTransformPanel(null);
       $('#btn-generate').disabled = true;
-      canvas.classList.remove('free-mode');
-      return;
+      if (comps.length === 0) {
+        canvas.classList.remove('free-mode');
+        return;
+      }
+    } else {
+      $('#btn-generate').disabled = false;
     }
-
-    $('#btn-generate').disabled = false;
     canvas.classList.add('free-mode'); // 有构件即可编辑
     canvas.innerHTML = '';
 
@@ -1168,8 +1198,8 @@ if (index >= 3) {
     });
 
     $('#btn-generate').addEventListener('click', async () => {
-      if (AppState.currentChar.components.length === 0) {
-        showToast('先选择一个构件，让你的字有一个开始');
+      if (AppState.currentChar.components.length < 2) {
+        showToast('请选择两个构件来造字');
         return;
       }
       // 保存用户编辑后的布局并导出完整新字图像（html2canvas截图）
@@ -2010,6 +2040,7 @@ if (index >= 3) {
 
   // ===== P09 海报页 =====
   async function generatePoster() {
+    await loadPosterScripts();
     const canvas = $('#poster-canvas');
     const char = AppState.collection[0] || AppState.currentChar;
 
@@ -2036,7 +2067,8 @@ if (index >= 3) {
     await PosterGenerator.generate(posterData, null, canvas);
   }
 
-  function renderBgSwitcher() {
+  async function renderBgSwitcher() {
+    await loadPosterScripts();
     const bgs = PosterGenerator.getBackgrounds();
     const container = $('#poster-bg-switch');
     container.innerHTML = bgs.map(bg =>
@@ -2069,6 +2101,7 @@ if (index >= 3) {
 
   function initPoster() {
     $('#btn-save-poster').addEventListener('click', async () => {
+      await loadPosterScripts();
       const canvas = $('#poster-canvas');
       const success = await PosterGenerator.saveAsImage(canvas, `字造集_${AppState.userName}_${Date.now()}.png`);
       if (success === 'mobile') showToast('海报已生成，请长按图片保存');
