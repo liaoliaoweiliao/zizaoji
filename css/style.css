@@ -1718,14 +1718,17 @@ body::before {
 }
 .certify-title {
   font-family: var(--font-ancient);
-  font-size: 18px;
-  letter-spacing: 3px;
+  font-size: 17px;
+  letter-spacing: 2px;
   margin-bottom: 20px;
   border-bottom: 1px solid var(--color-border);
   padding-bottom: 12px;
-  padding-right: 64px;
+  padding-right: 56px;
   position: relative;
   z-index: 2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .certify-row,
 .certify-declaration {

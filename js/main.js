@@ -94,6 +94,7 @@
       if (!audioCache[key]) {
         const a = new Audio(base + tracks[key]);
         a.preload = 'auto';
+        try { a.load(); } catch(e) {}
         audioCache[key] = a;
       }
       return audioCache[key];
@@ -104,6 +105,15 @@
       const queued = pending.splice(0);
       queued.forEach(args => playSfx.apply(null, args));
       if (currentBgmKey) startBgm(currentBgmKey, currentBgm?._zDb ?? -20, true);
+    }
+    // 手机端：每次用户交互时检查并恢复被暂停的BGM
+    function ensureBgmRunning() {
+      if (window.__zizaojiMuted) return;
+      if (!unlocked) { unlock(); return; }
+      if (currentBgm && currentBgm.paused && currentBgmKey) {
+        currentBgm.volume = dbToVolume(currentBgm._zDb ?? -20);
+        currentBgm.play().catch(() => {});
+      }
     }
     function fadeTo(audio, target, ms, done) {
       if (!audio) { if (done) done(); return; }
@@ -122,8 +132,17 @@
       const target = dbToVolume(db);
       a.loop = true;
       a._zDb = db;
+      // 相同BGM且正在播放：只调音量
       if (currentBgm === a && !a.paused) {
         if (Math.abs(a.volume - target) > 0.01) fadeTo(a, target, fadeMs);
+        return;
+      }
+      // 相同BGM但被暂停了（手机端常见）：恢复播放
+      if (currentBgm === a && a.paused) {
+        a.volume = immediate ? target : 0;
+        const p = a.play();
+        if (p && p.catch) p.catch(() => {});
+        if (!immediate) fadeTo(a, target, fadeMs);
         return;
       }
       if (currentBgm && currentBgm !== a) {
@@ -134,11 +153,19 @@
       currentBgmKey = key;
       a.volume = immediate ? target : 0;
       const p = a.play();
-      if (p && p.catch) p.catch(() => { unlocked = false; });
+      if (p && p.catch) p.catch(() => {
+        // 手机端播放失败时不重置unlocked，等待下次用户交互恢复
+        console.warn('BGM play failed, will retry on next user interaction');
+      });
       if (!immediate) fadeTo(a, target, fadeMs);
     }
     function pageBgm(pageId) {
       if (window.__zizaojiMuted) return;
+      // 手机端保障：页面切换时若BGM被暂停则恢复
+      if (unlocked && currentBgm && currentBgm.paused && currentBgmKey) {
+        currentBgm.volume = dbToVolume(currentBgm._zDb ?? -20);
+        currentBgm.play().catch(() => {});
+      }
       const key = bgmByPage[pageId];
       if (!key) return;
       const db = bgmVolumes[pageId] ?? -20;
@@ -205,13 +232,14 @@
       if (!unlocked) { currentBgmKey = key; currentBgm = getAudio(key); currentBgm._zDb = db; return; }
       startBgm(key, db, false);
     }
-    return { unlock, pageBgm, playSfx, fadeBgmOut, setMeaningStyle, getAudio, setMuted, toggleMuted, isMuted };
+    return { unlock, pageBgm, playSfx, fadeBgmOut, setMeaningStyle, getAudio, setMuted, toggleMuted, isMuted, ensureBgmRunning };
   })();
   window.AudioEngine = AudioEngine;
 
   // 浏览器自动播放策略：首次用户操作后立即解锁，并补播需要的交互声。
+  // 手机端额外保障：每次交互都检查BGM是否被暂停，若暂停则恢复。
   ['pointerdown','touchstart','keydown'].forEach(evt =>
-    document.addEventListener(evt, () => AudioEngine.unlock(), { once: true, passive: true })
+    document.addEventListener(evt, () => AudioEngine.ensureBgmRunning(), { passive: true })
   );
 
   function showToast(msg, duration = 2000) {
@@ -228,7 +256,7 @@
     if (posterScriptsLoaded) return Promise.resolve();
     if (posterScriptsPromise) return posterScriptsPromise;
     posterScriptsPromise = new Promise((resolve, reject) => {
-      const v = '20260825-v35-4';
+      const v = '20260825-v35-5';
       const s1 = document.createElement('script');
       s1.src = 'js/poster.embedded-images.js?v=' + v;
       s1.onload = () => {
