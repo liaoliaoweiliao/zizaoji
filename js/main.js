@@ -112,7 +112,7 @@
       if (!unlocked) { unlock(); return; }
       if (currentBgm && currentBgm.paused && currentBgmKey) {
         currentBgm.volume = dbToVolume(currentBgm._zDb ?? -20);
-        currentBgm.play().catch(() => {});
+        playWithRetry(currentBgm);
       }
     }
     function fadeTo(audio, target, ms, done) {
@@ -127,6 +127,25 @@
       };
       requestAnimationFrame(step);
     }
+    // 带重试的音频播放：play()失败时等待canplay后重试，确保BGM能播出来
+    function playWithRetry(a) {
+      const doPlay = () => {
+        const p = a.play();
+        if (p && p.catch) {
+          p.catch(() => {
+            // 播放失败（通常是音频未加载完成），等待canplay后重试
+            const onReady = () => { a.play().catch(() => {}); };
+            a.addEventListener('canplay', onReady, { once: true });
+            // 兜底：1.5秒后强制重试
+            setTimeout(() => {
+              a.removeEventListener('canplay', onReady);
+              if (a.paused) a.play().catch(() => {});
+            }, 1500);
+          });
+        }
+      };
+      doPlay();
+    }
     function startBgm(key, db, immediate, fadeMs=500) {
       const a = getAudio(key);
       const target = dbToVolume(db);
@@ -140,8 +159,7 @@
       // 相同BGM但被暂停了（手机端常见）：恢复播放
       if (currentBgm === a && a.paused) {
         a.volume = immediate ? target : 0;
-        const p = a.play();
-        if (p && p.catch) p.catch(() => {});
+        playWithRetry(a);
         if (!immediate) fadeTo(a, target, fadeMs);
         return;
       }
@@ -152,11 +170,7 @@
       currentBgm = a;
       currentBgmKey = key;
       a.volume = immediate ? target : 0;
-      const p = a.play();
-      if (p && p.catch) p.catch(() => {
-        // 手机端播放失败时不重置unlocked，等待下次用户交互恢复
-        console.warn('BGM play failed, will retry on next user interaction');
-      });
+      playWithRetry(a);
       if (!immediate) fadeTo(a, target, fadeMs);
     }
     function pageBgm(pageId) {
@@ -164,7 +178,7 @@
       // 手机端保障：页面切换时若BGM被暂停则恢复
       if (unlocked && currentBgm && currentBgm.paused && currentBgmKey) {
         currentBgm.volume = dbToVolume(currentBgm._zDb ?? -20);
-        currentBgm.play().catch(() => {});
+        playWithRetry(currentBgm);
       }
       const key = bgmByPage[pageId];
       if (!key) return;
@@ -232,6 +246,10 @@
       if (!unlocked) { currentBgmKey = key; currentBgm = getAudio(key); currentBgm._zDb = db; return; }
       startBgm(key, db, false);
     }
+    // 预加载所有BGM文件，避免切换时因未加载导致play()失败
+    ['bgmHome','bgmCollection','bgmMeaning','bgmPoster'].forEach(k => {
+      try { const a = getAudio(k); a.preload = 'auto'; a.load(); } catch(e) {}
+    });
     return { unlock, pageBgm, playSfx, fadeBgmOut, setMeaningStyle, getAudio, setMuted, toggleMuted, isMuted, ensureBgmRunning };
   })();
   window.AudioEngine = AudioEngine;
@@ -256,7 +274,7 @@
     if (posterScriptsLoaded) return Promise.resolve();
     if (posterScriptsPromise) return posterScriptsPromise;
     posterScriptsPromise = new Promise((resolve, reject) => {
-      const v = '20260825-v35-5';
+      const v = '20260825-v35-7';
       const s1 = document.createElement('script');
       s1.src = 'js/poster.embedded-images.js?v=' + v;
       s1.onload = () => {
@@ -1844,7 +1862,15 @@ if (index >= 3) {
     const comps = AppState.currentChar.components;
     const charName = comps.length === 1 ? comps[0].name : comps.map(c => c.name).join('');
 
-    $('#modalCharacter').textContent = charName;
+    // 优先显示用户造出的完整新字图像，兜底显示构件名称拼接
+    const modalChar = $('#modalCharacter');
+    const glyph = AppState.createdGlyph || JSON.parse(sessionStorage.getItem('createdGlyph') || 'null');
+    const glyphImage = (glyph && glyph.image) || AppState.currentChar.glyphImage;
+    if (glyphImage) {
+      modalChar.innerHTML = `<img src="${glyphImage}" alt="新造字" style="max-width:160px;max-height:160px;object-fit:contain;display:block;margin:0 auto;">`;
+    } else {
+      modalChar.textContent = charName;
+    }
     $('#modalStyle').textContent = s.name || '';
     $('#modalMeaning').textContent = getStylePreview(styleId);
     $('#meaningOverlay').classList.add('show');
