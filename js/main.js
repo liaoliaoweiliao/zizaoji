@@ -69,8 +69,8 @@
     const bgmVolumes = {
       // 整体背景音乐音量大幅提高
       home: -5, scene: -7, intro: -7, lab: -10, ability: -6, workshop: -4,
-      analysis: -12, meaning: -6, charcard: -6, certify: -6,
-      poster: -6, collection: -12
+      analysis: -10, meaning: -6, charcard: -6, certify: -6,
+      poster: -6, collection: -6
     };
     const bgmByPage = {
       scene: 'bgmHome', intro: 'bgmHome', lab: 'bgmCollection',
@@ -269,7 +269,7 @@
     return { unlock, pageBgm, playSfx, fadeBgmOut, setMeaningStyle, getAudio, setMuted, toggleMuted, isMuted, ensureBgmRunning };
   })();
   window.AudioEngine = AudioEngine;
-  console.log('[字造集] AudioEngine v35-9 已加载，四页共享BGM修复已启用');
+  console.log('[字造集] AudioEngine v35-10 已加载，四页共享BGM修复已启用');
 
   // 浏览器自动播放策略：首次用户操作后立即解锁，并补播需要的交互声。
   // 手机端额外保障：每次交互都检查BGM是否被暂停，若暂停则恢复。
@@ -291,7 +291,7 @@
     if (posterScriptsLoaded) return Promise.resolve();
     if (posterScriptsPromise) return posterScriptsPromise;
     posterScriptsPromise = new Promise((resolve, reject) => {
-      const v = '20260825-v35-9';
+      const v = '20260825-v35-10';
       const s1 = document.createElement('script');
       s1.src = 'js/poster.embedded-images.js?v=' + v;
       s1.onload = () => {
@@ -633,6 +633,8 @@
     },
 
     collection() {
+      // 提前预加载字造集页BGM，确保切换时已就绪
+      try { const a = AudioEngine.getAudio('bgmHome'); a.preload = 'auto'; a.load(); } catch(e) {}
       renderCollection();
     }
   };
